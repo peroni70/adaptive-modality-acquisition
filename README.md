@@ -13,7 +13,8 @@ Multimodal machine learning can improve flexibility, performance, and robustness
 
 
 <img width="10510" height="7020" alt="image" src="https://github.com/user-attachments/assets/38f0da4f-1536-4058-8411-cd9da7e29d0f" />
-An overview of Efficient Adaptive Modality Acquisition (EAMA). **a)** We learn a value model $\widehat{Q}_\theta$ by generating views of the samples and subsets of modalities to acquire. We train the model to predict the true value of acquiring the selected subset of modalities. \textbf{b)} Using the learned value model $\widehat{Q}_\theta$, at inference, we optimize the selected subset $q_t$ to maximize the estimated value minus acquisition costs. \textbf{c)} After optimizing $q_t$, we acquire the selected modalities and repeat (b) until either $p_t = [M]$ or the maximum objective value is no longer positive, at which point we predict with $\hat y = f(\mathbf{c}, \mathbf{X}^{p_t})$.
+
+An overview of Efficient Adaptive Modality Acquisition (EAMA). a) We learn a value model $\widehat{Q}\_\theta$ by generating views of the samples and subsets of modalities to acquire. We train the model to predict the true value of acquiring the selected subset of modalities. \textbf{b)} Using the learned value model $\widehat{Q}\_\theta$, at inference, we optimize the selected subset $q_t$ to maximize the estimated value minus acquisition costs. \textbf{c)} After optimizing $q_t$, we acquire the selected modalities and repeat (b) until either $p_t = [M]$ or the maximum objective value is no longer positive, at which point we predict with $\hat y = f(\mathbf{c}, \mathbf{X}^{p_t})$.
 
 ## Install
 
@@ -346,7 +347,7 @@ pytest
 ## Note on AI Usage
 
 The research this accompanies - the method, the experimental design, the original experiment code, and the
-results reported in the paper - is the authors' own work, without the use of an AI tools.
+results reported in the paper - is the authors' own work, without the use of AI tools.
 
 Claude (Anthropic) was used to prepare this repository for public release: it
 consolidated separate per-application implementations into the shared
