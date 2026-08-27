@@ -1,20 +1,19 @@
 # Adaptive Modality Acquisition
 
-Companion code for *[paper title]*.
+Companion code for *When is More Better? Efficient and Adaptive Modality Acquisition in Multimodal Learning*.
 
-Information is rarely free. A clinician orders one test before another, a
-sensor rig spends power per reading, an annotation pipeline pays per label.
-This package learns **when to stop paying**: a value model scores a proposed
-subset of modalities against what has already been observed, and an
-acquisition policy uses it to buy information in stages, stopping once nothing
-left is worth its cost.
+**TL;DR** This project can be used to solve multi-stage subset selection problems with heterogeneous acquisition costs. If you have a problem with 1. **many modalities** or sources of information that have 2. **varying costs** to acquire per-sample and 3. urgency, such that reducing the number of stages by **selecting subsets of modalities** to acquire at one time is beneficial, this project can provide an efficient and scalable pipeline to solve this problem.
 
-```
-observe context -> score candidate subsets -> acquire the best -> repeat -> predict
-                          ^                                          |
-                          +------------------------------------------+
-                                     until nothing pays for itself
-```
+Multimodal machine learning can improve flexibility, performance, and robustness, but incorporating many modalities increases acquisition costs and system complexity. This motivates *adaptive modality acquisition* (AMA), where a subset of the most informative modalities is selected *before observation* to balance predictive performance against cost. This is critical in settings such as healthcare where the value and cost of additional tests depend on the specific patient, improving efficiency while naturally supporting heterogeneous acquisition costs. This setting leads to the problem of *multi-stage subset selection with unobserved items and heterogeneous costs*, which poses challenges in both uncertainty and scalability. Our key idea is to learn a compositional energy-based value function that scores candidate modality subsets for their expected contribution to downstream prediction. We implement this through *recursive value functions* that estimate the value of acquiring any subset of modalities conditioned on the currently observed modalities, allowing the same model to be applied iteratively as new modalities are acquired. Under a natural submodularity assumption on modality value, the acquisition objective can be optimized efficiently via submodular optimization. This framework yields scalable training and inference algorithms, collectively referred to as Efficient Adaptive Modality Acquisition (EAMA), that scale linearly in the number of modalities. Across multiple real-world multimodal datasets with up to $M=15$ modalities, EAMA achieves up to an $8\times$ improvement in balancing accuracy gains against acquisition costs relative to baseline methods.
+
+<figure>
+<img width="13820" height="3560" alt="image" src="https://github.com/user-attachments/assets/a097fcea-8e40-4094-9730-c3af79714e41" />
+  <figcaption>The adaptive modality acquisition (AMA) problem in a clinical setting. AMA seeks to select subsets of unobserved modalities over multiple stages to maximize predictive performance while minimizing acquisition costs. In this figure, modalities correspond to medical tests. Given a patient's context (e.g., chief complaint and vitals) and patient-specific costs (e.g., monetary cost, health risk, and time), the task is to decide which unobserved tests to order simultaneously, before their outcomes are known, to obtain sufficient information for accurate diagnosis at minimal cost.</figcaption>
+</figure>
+
+
+<img width="10510" height="7020" alt="image" src="https://github.com/user-attachments/assets/38f0da4f-1536-4058-8411-cd9da7e29d0f" />
+An overview of Efficient Adaptive Modality Acquisition (EAMA). **a)** We learn a value model $\widehat{Q}_\theta$ by generating views of the samples and subsets of modalities to acquire. We train the model to predict the true value of acquiring the selected subset of modalities. \textbf{b)} Using the learned value model $\widehat{Q}_\theta$, at inference, we optimize the selected subset $q_t$ to maximize the estimated value minus acquisition costs. \textbf{c)} After optimizing $q_t$, we acquire the selected modalities and repeat (b) until either $p_t = [M]$ or the maximum objective value is no longer positive, at which point we predict with $\hat y = f(\mathbf{c}, \mathbf{X}^{p_t})$.
 
 ## Install
 
@@ -33,7 +32,7 @@ For a pinned environment, or on a cluster, see [Environments](#environments).
 ama run configs/toy_sensors.yaml
 ```
 
-A few minutes on a CPU, no downloads. It trains a classifier, ranks the
+This can be run in a few minutes on a CPU, no downloads. It trains a classifier, ranks the
 modalities, trains a value model, and evaluates the policy against fixed
 baselines at three cost levels. The next section walks through what it did.
 
@@ -226,7 +225,7 @@ against a baseline that observes context alone. Per-example rows record the
 same quantities, so two methods can be compared on identical examples under
 identical costs.
 
-## The four stages
+## Pipeline Details
 
 Each stage reads the previous one's artifacts, so a sweep over value functions
 shares one classifier and a long evaluation can be re-run without retraining.
@@ -256,29 +255,27 @@ one row per test example, for each cost setting.
 What the value model is trained to predict about a proposed acquisition.
 Selected per run; each defines its own target, output width, loss and metric.
 
-| Name | Target | Reads as |
+| Name | Target | Interpretation |
 |---|---|---|
-| `acc_change` | `{0, 1, 2}` | correctness lost / unchanged / gained. Its score, `P(gained) − P(lost)`, is an expected accuracy change |
+| `acc_change` | `{-1, 0, 1}` | correctness lost / unchanged / gained. Its score, `P(gained) − P(lost)`, is an expected accuracy change |
 | `bit_flip` | `{0, 1}` | acquiring turns a wrong prediction right |
 | `info_gain` | real | reduction in cross-entropy loss |
 
 `acc_change` is the default, and the one whose units make `lambda`
-interpretable. Adding another means subclassing `ValueFunction` and
+interpretable. We recommend the `bit_flip` value function only when the **model confusion rate** (MCR) is low, meaning that adding new information rarely or ever causes the classifier to change from the correct prediction to an incorrect prediction. Adding another value function can be achieved by subclassing `ValueFunction` and
 registering it.
 
 ## Subset optimizers
 
-Each stage solves `max_Q v(Q | P) − cost(Q)` over unacquired modalities. The
-value model is not guaranteed submodular and the objective is not monotone, so
-these are heuristics, differing in how many value-model evaluations they spend.
+Each stage solves `max_Q v(Q | P) − cost(Q)` over unacquired modalities. Under submodularity assumptions (verified in our paper on four diverse tasks), this optimization problem can be solved with a 1/2-approximation guarantee using the Randomized USM algorithm (Buchbinder et al., 2012). Practically, this algorithm can be somewhat pessimistic in its modality selection, so we also provide the greedy USM algorithm (Nemhauser et al., 1978). The greedy algorithm has no performance guarantees in this non-monotonic setting, so we combine it with Randomized USM in the `hybrid_usm` optimizer (chosen by default), selecting whichever finds the better subset, preserving the approximation guarantee.
 
 | Name | Cost | Notes |
 |---|---|---|
-| `single_item_greedy` | one pass | proposes at most one modality per stage |
-| `greedy_usm` | cheap | adds the best remaining modality until it stops helping |
-| `rand_usm` | moderate | randomized double greedy for unconstrained maximization |
-| `hybrid_usm` | both | runs the two above, keeps the better subset |
-| `enum` | `2^M` | exact; only practical for few modalities |
+| `single_item_greedy` | $O(M)$ | proposes at most one modality per stage |
+| `greedy_usm` | $O(M^2)$ | adds the best remaining modality until it stops helping |
+| `rand_usm` | $O(M)$ | randomized double greedy for unconstrained maximization |
+| `hybrid_usm` | $O(M^2)$ | runs the two above, keeps the better subset |
+| `enum` | $O(2^M)$ | exact; only practical for few modalities |
 
 ## Policies
 
@@ -346,13 +343,13 @@ src/ama/
 pytest
 ```
 
-## Note on preparation
+## Note on AI Usage
 
-The research this accompanies - the method, the experimental design, and the
-results reported in the paper - is the authors' own work.
+The research this accompanies - the method, the experimental design, the original experiment code, and the
+results reported in the paper - is the authors' own work, without the use of an AI tools.
 
-Claude (Anthropic) was used to prepare this repository for release: it
-consolidated four separate per-application implementations into the shared
+Claude (Anthropic) was used to prepare this repository for public release: it
+consolidated separate per-application implementations into the shared
 library here, and wrote the tests, documentation, packaging and the synthetic
 example used in the Quickstart. It was not used to generate the ideas, design
 the experiments, or produce the results in the paper.
