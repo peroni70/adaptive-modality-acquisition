@@ -1,0 +1,20 @@
+# Standard environment for this repository.
+#
+#   conda env create -f environment.yml
+#   conda activate ama
+#
+# The package itself is installed in editable mode by the pip section below,
+# which also pulls the runtime dependencies declared in pyproject.toml.
+#
+# This file installs whatever torch PyPI currently serves. To reproduce the
+# tested combination, including the CUDA build, prefer scripts/setup_env.sh,
+# which pins:
+#   torch==2.10.0  torchvision==0.25.0  from  https://download.pytorch.org/whl/cu128
+name: ama
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -e .[dev,plots]

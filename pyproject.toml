@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ama"
+version = "0.1.0"
+description = "Adaptive modality acquisition with learned subset value models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+# Upper bounds are deliberate: an unpinned install picks up the newest
+# release, which is not the combination this code was tested against. The
+# exact tested versions live in environment.yml and scripts/setup_env.sh.
+dependencies = [
+    "numpy>=1.24,<3",
+    "torch>=2.1,<3",
+    "torchvision>=0.16,<1",
+    "scikit-learn>=1.3,<2",
+    "pyyaml>=6.0,<7",
+    "tqdm>=4.65,<5",
+]
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.7,<4", "pandas>=2.0,<4"]
+dev = ["pytest>=7.4,<10"]
+
+[project.scripts]
+ama = "ama.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

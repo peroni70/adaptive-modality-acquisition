@@ -1,0 +1,44 @@
+# Fast end-to-end check: tiny splits, few epochs, two cost levels.
+# Not a meaningful experiment - it exists to prove the pipeline runs.
+app: patch_mnist
+context_idx: 10
+seed: 0
+device: auto
+run_dir: runs/patch_mnist_smoke
+
+data:
+  root: ~/.cache/ama/mnist
+  train_fraction: 0.9
+  max_examples: {train: 512, val: 128, test: 128}
+
+masker:
+  type: patch
+  grid: {image_size: 28, patch_size: 7}
+
+metrics:
+  n_classes: 10
+
+classifier:
+  encoder: {type: conv}
+  hidden: [64, 32]
+  mode_emb_dim: 32
+  epochs: 2
+  lr: 0.001
+  batch_size: 64
+
+value_model:
+  encoder: {type: conv}
+  hidden: [64, 32]
+  mode_emb_dim: 32
+  epochs: 2
+  lr: 0.001
+  batch_size: 32
+  n_repeats: {train: 1, val: 1, test: 1}
+  use_hinge_loss: true
+  calibration_epochs: 2
+
+policy:
+  value_fns: [acc_change]
+  alphas: [0.0, 0.05]
+  optimizers: [greedy_usm, single_item_greedy]
+  batch_size: 64

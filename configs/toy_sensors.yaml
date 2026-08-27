@@ -1,0 +1,46 @@
+# Worked example: eight sensors on two types of machine. The free sensor says
+# which type; which sensors carry the fault depends on the type, so no fixed
+# set of sensors is efficient. Runs on a laptop CPU in a few minutes.
+#
+#   ama run configs/toy_sensors.yaml
+app: toy_sensors
+context_idx: 0            # the free ambient sensor
+seed: 0
+device: auto
+run_dir: runs/toy_sensors
+
+data:
+  sizes: {train: 8000, val: 2000, test: 2000}
+
+# Each sensor owns a contiguous block of the feature vector, which is exactly
+# what SliceMasker describes. No custom masking code needed.
+masker:
+  type: slice
+  spans: [[0, 4], [4, 8], [8, 12], [12, 16], [16, 20], [20, 24], [24, 28], [28, 32]]
+
+metrics:
+  n_classes: 2
+
+classifier:
+  encoder: {type: flat}   # features are already a flat vector
+  hidden: [128, 64]
+  mode_emb_dim: 32
+  epochs: 15
+  lr: 0.001
+  batch_size: 64
+
+value_model:
+  encoder: {type: flat}
+  hidden: [128, 64]
+  mode_emb_dim: 32
+  epochs: 15
+  lr: 0.001
+  batch_size: 64
+  n_repeats: {train: 2, val: 2, test: 1}
+  num_workers: auto
+
+policy:
+  value_fns: [acc_change]
+  alphas: [0.0, 0.01, 0.05]
+  optimizers: [greedy_usm, single_item_greedy]
+  batch_size: 128
