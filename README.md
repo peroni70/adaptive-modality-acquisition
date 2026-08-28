@@ -244,6 +244,9 @@ ama train-value      configs/toy_sensors.yaml --value-fn acc_change
 ama eval-policy      configs/toy_sensors.yaml --costs costs.npy --lambda 40
 ```
 
+`ama confusion-rate` is a fifth, standalone: a diagnostic that needs only the
+classifier, described under [Value functions](#value-functions).
+
 `ama run` does all four. Any config field can be overridden with `-o key=value`,
 and `ama show <config> -o ...` prints the resolved config so you can confirm an
 override landed before starting a long run.
@@ -265,6 +268,51 @@ Selected per run; each defines its own target, output width, loss and metric.
 `acc_change` is the default, and the one whose units make `lambda`
 interpretable. We recommend the `bit_flip` value function only when the **model confusion rate** (MCR) is low, meaning that adding new information rarely or ever causes the classifier to change from the correct prediction to an incorrect prediction. Adding another value function can be achieved by subclassing `ValueFunction` and
 registering it.
+
+### Measuring the model confusion rate
+
+The MCR is measured directly, and needs only a trained classifier:
+
+```bash
+ama confusion-rate configs/toy_sensors.yaml
+```
+
+It draws random (observed, proposed) pairs - the same draws the value model is
+trained on - and reports what happens to the prediction when the proposal is
+granted:
+
+```
+Draws                          : 16000
+Accuracy before acquiring      : 0.7033
+Accuracy after acquiring       : 0.8686
+
+Outcome of a random acquisition
+  gained    (wrong -> right)   : 0.2108
+  lost      (right -> wrong)   : 0.0455
+  unchanged                    : 0.7437
+
+MODEL CONFUSION RATE           : 0.0455
+    share of all acquisitions that break a correct prediction
+  given correct beforehand     : 0.0647
+    share of the correct predictions that acquiring destroys
+
+Net accuracy change            : +0.1653
+
+Suggested value function       : acc_change
+```
+
+Two forms are reported because they answer different questions. The
+unconditional rate is the share of *all* acquisitions that do damage; the
+conditional rate is the share of *the predictions that had something to lose*,
+and is the sharper number when baseline accuracy is low.
+
+Here, with 4.6% of acquisitions breaking a correct prediction, a gain-only
+target would ignore a real part of the problem, so `acc_change` is the safer
+choice. Where the rate is negligible, `bit_flip` gives up almost nothing and
+offers a simpler binary target.
+
+Defaults to the training split; `--split val` or `--split test` to change it.
+Writes `confusion_rates_<split>.json` into the run directory.
 
 ## Subset optimizers
 

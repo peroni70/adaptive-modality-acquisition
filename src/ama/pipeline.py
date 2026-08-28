@@ -31,6 +31,7 @@ from .build import (
 from .config import Config
 from .costs import CostModel, load_costs
 from .data import PolicyDataset
+from .diagnostics import model_confusion_rates
 from .evaluation import (
     evaluate_by_prefix,
     evaluate_policy,
@@ -107,6 +108,40 @@ def stage_train_classifier(cfg: Config) -> dict:
         json.dumps({"val_accuracy": val_acc, **test}, indent=2)
     )
     return test
+
+
+def stage_confusion_rate(cfg: Config, split: str = "train") -> dict:
+    """Measure how often acquiring confuses the classifier.
+
+    Reported before any value model is trained, because the answer is what
+    decides which value function can represent the problem.
+    """
+    set_seed(cfg.seed)
+    masker, metrics = build_masker_and_metrics(cfg)
+    splits = load_splits(cfg)
+    if split not in splits:
+        raise ValueError(f"no split named {split!r}; have {sorted(splits)}")
+    classifier = _load_classifier(cfg, masker, metrics, splits)
+
+    print(f"Sampling acquisitions on the {split} split...")
+    rates = model_confusion_rates(
+        classifier,
+        splits[split],
+        masker,
+        cfg.context_idx,
+        n_repeats=cfg.value_model.n_repeats.get(split, 1),
+        batch_size=cfg.policy.batch_size,
+        seed=cfg.seed,
+        device=cfg.resolve_device(),
+    )
+    print()
+    print(rates.report())
+
+    cfg.run_path.mkdir(parents=True, exist_ok=True)
+    out = cfg.run_path / f"confusion_rates_{split}.json"
+    out.write_text(json.dumps({"split": split, **rates.to_dict()}, indent=2))
+    print(f"\nWrote {out}")
+    return rates.to_dict()
 
 
 def stage_greedy_order(cfg: Config, value_fn_name: str) -> list[int]:

@@ -2,14 +2,16 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
-build/
-dist/
+/build/
+/dist/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# Experiment artifacts and data
-runs/
-data/
+# Experiment artifacts and data. Anchored with a leading slash: an unanchored
+# rule matches at any depth, so plain "data/" would also exclude the
+# src/ama/data package.
+/runs/
+/data/
 *.pt
 *.csv
 
