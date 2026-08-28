@@ -3,6 +3,7 @@
     ama run configs/patch_mnist.yaml
     ama train-value configs/patch_mnist.yaml --value-fn bit_flip
     ama eval-policy configs/patch_mnist.yaml --costs costs.npy --lambda 0.5
+    ama confusion-rate configs/patch_mnist.yaml
     ama show configs/patch_mnist.yaml --field run_dir
 """
 
@@ -14,6 +15,7 @@ import sys
 from .config import load_config
 from .pipeline import (
     run_all,
+    stage_confusion_rate,
     stage_eval_policy,
     stage_greedy_order,
     stage_train_classifier,
@@ -35,9 +37,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "stage",
-        choices=["run", "train-classifier", "show", *PER_VALUE_FN_STAGES],
-        help="pipeline stage to run ('run' does all of them; "
-        "'show' prints the resolved config)",
+        choices=[
+            "run",
+            "train-classifier",
+            "confusion-rate",
+            "show",
+            *PER_VALUE_FN_STAGES,
+        ],
+        help="pipeline stage to run ('run' does all of them; 'show' prints the "
+        "resolved config; 'confusion-rate' reports how often acquiring "
+        "confuses the classifier)",
     )
     parser.add_argument("config", help="path to a YAML experiment config")
     parser.add_argument(
@@ -66,6 +75,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="exchange rate for --costs: how much you will spend per unit of "
         "expected accuracy gained, in the same units as the costs.",
+    )
+    parser.add_argument(
+        "--split",
+        default="train",
+        help="with 'confusion-rate', which split to measure (default: train)",
     )
     parser.add_argument(
         "--device",
@@ -127,6 +141,9 @@ def main(argv=None) -> int:
 
     if args.stage == "show":
         return show(cfg, args.field)
+    if args.stage == "confusion-rate":
+        stage_confusion_rate(cfg, args.split)
+        return 0
     if args.stage == "run":
         run_all(cfg, value_fns)
     elif args.stage == "train-classifier":
