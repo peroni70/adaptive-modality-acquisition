@@ -33,7 +33,7 @@ For a pinned environment, or on a cluster, see [Environments](#environments).
 ama run configs/toy_sensors.yaml
 ```
 
-This can be run in a few minutes on a CPU, no downloads. It trains a classifier, ranks the
+This can be run in a few minutes on a CPU, no additional downloads required. It trains a classifier, ranks the
 modalities, trains a value model, and evaluates the policy against fixed
 baselines at three cost levels. The next section walks through what it did.
 
@@ -49,12 +49,12 @@ The machines come in **two types**, and the free reading says which. On a type
 A machine the fault shows up in sensors 2 and 5; on a type B machine it shows
 up in sensors 3 and 4. Sensors 1, 6 and 7 are noise for everyone.
 
-That structure is the point. No fixed set of sensors is efficient here: a
+In this setting, there is no fixed set of sensors that is efficient. A
 population-level ranking has to buy all four informative sensors to cover both
 types, paying twice over on every machine. A policy that reads the free sensor
 first knows which type it is looking at, and buys only the two that matter.
-**No ranking of sensors, however good, can do this**, because the right answer
-depends on the case in front of you.
+**No fixed ranking of sensors, however good, can do this**, because the right answer
+depends on the type of machine.
 
 Setting this up took three things.
 
@@ -148,7 +148,7 @@ At a cost level where buying everything is a bad deal:
 | **adaptive policy** | **0.967** | **0.107** | **0.359** |
 
 Higher accuracy at **half the cost**, for a 48% better reward than the best
-fixed prefix. The third row is the control worth dwelling on: taking the same
+fixed prefix. The third row is the most important control: taking the same
 population-level ranking and merely choosing *when to stop* per machine buys
 almost nothing (0.244 vs 0.242). The gain comes from conditioning *which*
 sensors to buy on the case at hand.
@@ -206,8 +206,8 @@ With costs in dollars and `acc_change` predicting a change in expected
 accuracy, `--lambda 40` says *one additional point of expected accuracy is
 worth $40 to me* (0.01 accuracy for $0.40). Raise it and the policy buys more
 freely; lower it and it acquires only when the expected gain is large. Setting
-it is a policy decision about what accuracy is worth, and it is the knob that
-turns this from a benchmark into a deployable rule.
+it is a policy decision about what accuracy is worth, and it is the key knob that
+should be adjusted before deployment.
 
 ### Simulated costs
 
