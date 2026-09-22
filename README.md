@@ -406,9 +406,10 @@ the experiments, or produce the results in the paper.
 ## Citation
 
 ```bibtex
-@article{TODO,
-  title  = {TODO},
-  author = {TODO},
-  year   = {TODO}
+@article{peroni2026ama,
+  title={When is More Better? Efficient and Adaptive Modality Acquisition in Multimodal Learning},
+  author={Peroni, Matthew and Liang, Paul Pu and Bertsimas, Dimitris},
+  year={2026},
+  journal={Transactions on Machine Learning Research}
 }
 ```
